@@ -1,0 +1,6 @@
+selenium
+easyocr
+revChatGPT
+EdgeGPT
+GoogleBard
+pyperclip
