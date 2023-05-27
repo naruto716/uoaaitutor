@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, simpledialog
 from tkinter import StringVar, BooleanVar
 from tkinter import ttk
 
@@ -171,8 +171,8 @@ class Tooltip:
             self.tooltip = None
 
 class ChatClient(ttk.Frame):
-    def __init__(self, parent=None, **kwargs):
-        self.browser = BrowserInteraction()
+    def __init__(self, link, parent=None, **kwargs):
+        self.browser = BrowserInteraction(link)
         self.chatAI = ChatAI()
         self.ocr = OCR()
 
@@ -329,15 +329,15 @@ class ChatClient(ttk.Frame):
 
 
 class BrowserInteraction:
-    def __init__(self):
+    def __init__(self, link):
         # Create a new instance of the Edge driver
         self.driver = webdriver.Edge()
         self.timestamp_data = {}  # Dictionary to store timestamp data
-        self.get_transcription()
+        self.get_transcription(link)
 
-    def get_transcription(self):
+    def get_transcription(self, link):
         # Load the webpage
-        self.driver.get('https://auckland.au.panopto.com/Panopto/Pages/Viewer.aspx?id=0c7226e6-d1e1-4510-a101-affb005a705c')  # Replace with the URL of the webpage
+        self.driver.get(link)# Replace with the URL of the webpage
 
         # Wait until the elements with class "index-event-row" are present
         wait = WebDriverWait(self.driver, 120)  # Maximum wait time of 120 seconds
@@ -390,9 +390,10 @@ class BrowserInteraction:
         self.driver.quit()
 
 def main():
+    link = simpledialog.askstring("Input", "Please enter the link to the lecture recording:")
     root = tk.Tk()
     root.title("Cope Hard I Cry")
-    ChatClient(root)
+    ChatClient(link, root)
     root.mainloop()
 
 if __name__ == "__main__":
