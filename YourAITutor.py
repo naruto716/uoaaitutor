@@ -326,7 +326,18 @@ class ChatClient(ttk.Frame):
             self.system_prompt.insert('end', f"Error: {repr(e)}\n")
         self.send_button.config(state="normal")
             
+class attribute_to_be(object):
+    def __init__(self, locator, attribute, value):
+        self.locator = locator
+        self.attribute = attribute
+        self.value = value
 
+    def __call__(self, driver):
+        element = driver.find_element(*self.locator)   # Finding the referenced element
+        if element.get_attribute(self.attribute) == self.value:
+            return element
+        else:
+            return False
 
 class BrowserInteraction:
     def __init__(self, link):
@@ -339,6 +350,12 @@ class BrowserInteraction:
         # Load the webpage
         self.driver.get(link)# Replace with the URL of the webpage
 
+        # Wait for "aria-selected" attribute of the element with id "transcriptTabHeader" to be "true"
+        print("Waiting for the Caption tab to be selected...")
+        wait = WebDriverWait(self.driver, 120)  # Maximum wait time of 120 seconds
+        caption_selected = attribute_to_be((By.ID, 'transcriptTabHeader'), 'aria-selected', 'true')
+        wait.until(caption_selected)
+
         # Wait until the elements with class "index-event-row" are present
         wait = WebDriverWait(self.driver, 120)  # Maximum wait time of 120 seconds
         elements_present = EC.presence_of_all_elements_located((By.CLASS_NAME, 'index-event-row'))
@@ -347,20 +364,22 @@ class BrowserInteraction:
         # Find all the elements with class "index-event-row"
         elements = self.driver.find_elements(By.CLASS_NAME, 'index-event-row')
 
+        print("Getting Transcription")
         # Iterate over the elements
         for element in elements:
             try:
                 # Extract the text
-                text = WebDriverWait(element, 60).until(EC.visibility_of_element_located((By.CLASS_NAME, 'event-text'))).text
-
+                event_text_element = element.find_element(By.CLASS_NAME, 'event-text')
                 # Extract the timestamp
-                timestamp = WebDriverWait(element, 60).until(EC.visibility_of_element_located((By.CLASS_NAME, 'event-time'))).text
-
-                # Store the text and timestamp in the dictionary
-                self.timestamp_data[timestamp] = text
-
+                event_time_element = element.find_element(By.CLASS_NAME, 'event-time')
+                if event_text_element.text and event_time_element.text:
+                    text = event_text_element.text
+                    timestamp = event_time_element.text
+                    print(text, timestamp)
+                    # Store the text and timestamp in the dictionary
+                    self.timestamp_data[timestamp] = text
             except Exception as e:
-                print(f"Error occurred while extracting element data: {e}")
+                print(f"An error occurred: {e}")
 
     def retrieve_current_timestamp_from_div(self):
         try:
