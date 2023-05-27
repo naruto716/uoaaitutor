@@ -1,6 +1,6 @@
 # UOA COMPSCI230 Cope Hard I Cry
 Leveraging cutting-edge technology, this tool is your personal companion for deciphering the most unnecessarily confusing lectures, those that have stumped others before. 
-![image](https://github.com/naruto716/uoacompsci230copehard/assets/79365555/351c6527-3940-4f25-8260-140705661cfd)
+![image](https://github.com/naruto716/uoaaitutor/assets/79365555/454e0248-9caa-450e-972a-a494bda17753)
 
 # Description:
 As none of my friends found the the lectures understandable due to the way some concepts are explained (I am struggling a lot with understanding some very simple ideas from the lectures as well), I tried several approaches and found AIs very helpful with the comprehension of badly explained ideas. You might also want to use it for other unnecessarily confusing papers.
@@ -96,10 +96,10 @@ ChatGPT Official:
 1. Run the tool in python, everything is put in one file to avoid unnecessary confusion for some people.
 2. If you successfully installed the dependencies, you will see a browser popping up. Log in to your SCHOOL account and navigate to the lecture you want to watch.
 3. HIT THE CAPTION BUTTON on the left of the webpage as shown below:
-4. ![image](https://github.com/naruto716/uoacompsci230copehard/assets/79365555/a21fb5b9-f347-4d7c-b92b-5e914abe0bdd)
+4. ![image](https://github.com/naruto716/uoaaitutor/assets/79365555/ac5735e2-0669-4b00-a2da-826bff9aa37c)
 5. Wait a few seconds, if everything's going well, you will see a GUI
 6. Now watch the lecture recordings as usual, when in doubt, CLICK ON THE SEND BUTTON WITHOUT TYPING IN ANYTHING IN THE MESSAGE BOX, the tool will send the relevant context to AI and by default the AI will extract and explain the key points for you. You can ask it anything you are confused about regarding the lecture content.
 7. Do step 6 again for another topic/slide in the lecture
 8. If you want to use OCR, make sure you tick the OCR checkbox:
-![image](https://github.com/naruto716/uoacompsci230copehard/assets/79365555/cf6c4b66-3972-4641-831b-75177bf9be0e)
+![image](https://github.com/naruto716/uoaaitutor/assets/79365555/32f7d6fb-6858-4f52-87be-1a277fc1da35)
 If you encounter any issues, feel free to open an issue on this GitHub repository, and we will do our best to assist you. Enjoy using the tool!
