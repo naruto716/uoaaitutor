@@ -42,10 +42,19 @@ class ChatAI:
 
         if GOOGLE_BARD:
             self.bard = Bard.Chatbot(BARD_TOKEN)
+            
+        self.prev_text = ""
 
         self.set_model(DEFAULT_MODEL)
         
     def generate_response(self, message, window, reset, copy_to_clipboard = False):
+        window.insert(tk.END, "AI: ")
+        response = self.get_response(message, window, reset, copy_to_clipboard)
+        window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
+        self.prev_text = response
+        return response
+
+    def get_response(self, message, window, reset, copy_to_clipboard = False):
         response = ""
         if self.chatbot == self.chatgpt:
             response = self.ask_gpt(message, window, reset)
@@ -57,35 +66,24 @@ class ChatAI:
             response = self.ask_gpt_official(message, window, reset)
         elif self.chatbot == self.bard:
             response = self.ask_bard(message, window, reset)
-        
         if copy_to_clipboard:
             pyperclip.copy(response)
-
         return response
 
     def ask_bard(self, message, window, reset):
-        window.config(state='normal')  # Make it editable
-        window.insert(tk.END, "AI (Bard):\n")
-        window.see(tk.END)
         response = self.bard.ask(message)["content"]
         window.insert(tk.END, response)
-        window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
         window.see(tk.END)
-        window.config(state='disabled')  # Make it read only
         return response
 
     def ask_gpt_official(self, message, window, reset):
         if reset:
             self.chatgpt_official.reset()
         response = []
-        window.config(state='normal')  # Make it editable
-        window.insert(tk.END, "AI:\n")
         for data in self.chatbot.ask_stream(message):
             window.insert(tk.END, data)
             response.append(data)
             window.see(tk.END)
-        window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
-        window.config(state='disabled')  # Make it read only
         return "".join(response)
 
 
@@ -93,16 +91,12 @@ class ChatAI:
         if reset:
             self.chatgpt.reset_chat()
         response = self.chatbot.ask(message) #Get Response
-        window.config(state='normal')  # Make it editable
         prev_text = ""
-        window.insert(tk.END, "AI:\n")
         for data in response:
             message = data["message"][len(prev_text) :]
             prev_text = data["message"]
             window.insert(tk.END, message)
             window.see(tk.END)
-        window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
-        window.config(state='disabled')  # Make it read only
         return prev_text
 
     def set_model(self, model):
@@ -126,16 +120,13 @@ class ChatAI:
     async def ask_bing(self, prompt, window, reset):
         if reset:
             await self.bing.reset()
-        window.config(state='normal')  # Make it editable
-        window.insert(tk.END, "AI (Bing):\n")
         prev_text = ""
         async for final, response in self.bing.ask_stream(prompt=prompt, conversation_style=EdgeGPT.ConversationStyle.creative):
             if not final:
                 window.insert(tk.END, response[len(prev_text):])
                 window.see(tk.END)
                 prev_text = response
-        window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
-        window.config(state='disabled')  # Make it read only
+        return prev_text
         
 class OCR:
     def __init__(self):
@@ -180,15 +171,26 @@ class ChatClient(ttk.Frame):
         self.chatAI = ChatAI()
 
         ttk.Frame.__init__(self, parent, **kwargs)
+        
         self.parent = parent
-        self.parent.configure(bg='white')
-        self.parent.geometry('1000x600')
-        self.parent.minsize(800, 480)
-        self.parent.grid_columnconfigure(0, weight=3)  # Make the main window responsive horizontally
-        self.parent.grid_columnconfigure(1, weight=2)  # Make the system prompt responsive horizontally
-        self.parent.grid_rowconfigure(1, weight=1)    # Make the main window responsive vertically
-
+        self.parent.geometry('1200x600')
+        self.parent.minsize(1200, 600)
         self.parent.iconbitmap('icon.ico')
+        self.parent.rowconfigure(0, weight=1)
+        self.parent.columnconfigure(0, weight=1)
+        self.parent.columnconfigure(1, weight=1)
+
+        self.mainpanel = tk.Frame(master=self.parent, width=1200, height=600, bg='white')
+        self.mainpanel.grid_columnconfigure(0, weight=3)  # Make the main window responsive horizontally
+        self.mainpanel.grid_columnconfigure(1, weight=2)  # Make the system prompt responsive horizontally
+        self.mainpanel.grid_rowconfigure(1, weight=1)    # Make the main window responsive vertically
+        self.mainpanel.grid(row=0, column=1, sticky='nsew')
+        
+        self.leftpanel = tk.Frame(master=self.parent, width=200, height=600, bg='white')
+        self.leftpanel.grid_columnconfigure(0, weight=1)  # Make the left panel responsive horizontally
+        self.leftpanel.grid_rowconfigure((0, 2), weight=1)     # Make the left panel responsive vertically
+        self.leftpanel.grid_rowconfigure(1, weight=35)     # Make the left panel responsive vertically
+        self.leftpanel.grid(row=0, column=0, sticky='nsew')
 
         self.initialize_user_interface()
 
@@ -204,11 +206,11 @@ class ChatClient(ttk.Frame):
         style.configure("White.TLabel", background="white")
         
         # Create labels for widgets
-        ttk.Label(self.parent, text='System Prompt:', background='white', padding=10).grid(column=1, row=0, sticky='w')
-        ttk.Label(self.parent, text='Message Input:', background='white', padding=10).grid(column=0, row=2, sticky='ws')
+        ttk.Label(self.mainpanel, text='System Prompt:', background='white', padding=10).grid(column=1, row=0, sticky='w')
+        ttk.Label(self.mainpanel, text='Message Input:', background='white', padding=10).grid(column=0, row=2, sticky='ws')
 
         # Define the system prompt input field
-        self.right_panel = ttk.Frame(self.parent, style="White.TFrame")
+        self.right_panel = ttk.Frame(self.mainpanel, style="White.TFrame")
         self.right_panel.grid_columnconfigure(0, weight=1)
         self.right_panel.grid_rowconfigure(0, weight=5) 
         self.right_panel.grid_rowconfigure(1, weight=3)
@@ -226,19 +228,22 @@ class ChatClient(ttk.Frame):
         self.right_panel.grid(column=1, row=1, rowspan=5, padx=10, pady=10, sticky="nsew")
 
         # Define the chat history box
-        self.chat_history = scrolledtext.ScrolledText(self.parent, height=15, width=50)
+        self.chat_history = scrolledtext.ScrolledText(self.mainpanel, height=15, width=50)
         self.chat_history.grid(column=0, row=1, padx=10, pady=10, sticky="nsew")
         self.chat_history.config(state='disabled', bg='#E8F5E9')  # Initially, this is not editable
         self.chat_history.configure(font=("Arial", 12))  # Change the font to Arial with size 12
 
 
         # Define the message input field
-        self.message_input = scrolledtext.ScrolledText(self.parent, height=8, width=50)
+        self.message_input = scrolledtext.ScrolledText(self.mainpanel, height=8, width=50)
         self.message_input.grid(column=0, row=3, padx=10, pady=10, sticky="ew")
         self.message_input.config(bg='#FFF9C4')
 
         # Define the timestamp input field
-        self.timestamp_frame = tk.Frame(self.parent, background="white")
+        self.timestamp_frame = tk.Frame(self.mainpanel, background="white")
+        self.timestamp_frame.columnconfigure([0, 1, 2, 3], weight=1)
+        self.timestamp_frame.columnconfigure(4, weight=2)
+        
         ttk.Label(self.timestamp_frame, text='Timestamp:', background='white', padding=10).grid(column=0, row=0, sticky='e')
         self.timestamp = ttk.Entry(self.timestamp_frame, width=20, style="White.TEntry")
         self.timestamp.grid(column=1, row=0, padx=10, pady=5, sticky="we")
@@ -247,15 +252,15 @@ class ChatClient(ttk.Frame):
         self.time_span = ttk.Entry(self.timestamp_frame, width=20, style="White.TEntry")
         self.time_span.insert(0, '180')
         self.time_span.grid(column=3, row=0, padx=10, pady=5, sticky="we")
+        
+        # Define the send message button
+        self.send_button = ttk.Button(self.timestamp_frame, text="Send", command=lambda: threading.Thread(target=self.send_message).start(), style="White.TButton")
+        self.send_button.grid(column=4, row=0, padx=10, pady=10, sticky="we")
 
         self.timestamp_frame.grid(column=0, row=5, padx=10, pady=10, sticky="w")
 
-        # Define the send message button
-        self.send_button = ttk.Button(self.parent, text="Send", command=lambda: threading.Thread(target=self.send_message).start(), style="White.TButton")
-        self.send_button.grid(column=0, row=5, padx=10, pady=10, sticky="e")
-
         # Create a frame for the new widgets
-        self.extra_options_frame = tk.Frame(self.parent, background="white")
+        self.extra_options_frame = tk.Frame(self.mainpanel, background="white")
         self.extra_options_frame.grid_columnconfigure((0,1,2), weight=1)
         ttk.Label(self.extra_options_frame, text='Chat History:', background='white', padding=10).grid(column=0, row=0, sticky='w')
         ttk.Label(self.extra_options_frame, text='Engine:', background='white', padding=10).grid(column=1, row=0, sticky='e')
@@ -285,7 +290,58 @@ class ChatClient(ttk.Frame):
         self.copy_response_box.grid(column=5, row=0, padx=10, pady=5, sticky="we")
 
         self.extra_options_frame.grid(column=0, row=0, padx=10, pady=10, columnspan=1, sticky="nsew")
+        
+        #Left Panel
+        separator = ttk.Separator(self.leftpanel, orient='vertical')
+        separator.grid(column=1, row=0, rowspan=3, sticky='ens', padx=12, pady=22)
+        
+        # Define the summarization label
+        self.summarization_label = ttk.Label(self.leftpanel, text='Summary:', style="White.TLabel")
+        self.summarization_label.grid(column=0, row=0, padx=10, pady=10, sticky="nw")        
 
+        # Define a panel for the summarization and options
+        self.summarization_panel = tk.Frame(self.leftpanel, background="white")
+        self.summarization_panel.grid_columnconfigure((0,1,2,3), weight=1)
+        self.summarization_panel.grid(column=0, row=2, padx=10, pady=10, sticky="wes")
+        
+        # Define the summarization engine label
+        self.summarization_engine_label = ttk.Label(self.summarization_panel, text='Engine:', background='white')
+        self.summarization_engine_label.grid(column=1, row=1, sticky='e')
+        
+        #define the summarization engine combobox
+        self.summarization_value = StringVar()
+        self.summarization_box = ttk.Combobox(self.summarization_panel, textvariable=self.summarization_value, state="readonly")
+        self.summarization_box["values"] = ('gpt-4', 'gpt-3.5-turbo', 'bing', 'gpt-4 official', 'gpt-3.5-turbo official', 'bard')
+        self.summarization_box.set("gpt-3.5-turbo")
+        self.summarization_box.grid(column=2, row=1, padx=10, pady=5, sticky="we")
+        
+        #define the always summarize checkbox
+        self.summarize_checkbox_value = BooleanVar(value=True)
+        self.summarize_checkbox = ttk.Checkbutton(self.summarization_panel, text='Always', variable=self.summarize_checkbox_value, style="White.TCheckbutton")
+        self.summarize_checkbox.grid(column=3, row=1, padx=10, pady=5, sticky="we")
+        
+        #define the summarization button
+        self.summarization_button = ttk.Button(self.summarization_panel, text='Summarize', command=lambda: threading.Thread(target=self.summarize).start(), style="White.TButton")
+        self.summarization_button.grid(column=0, columnspan=4, row=0, padx=10, pady=5, sticky="we")
+        
+        #define the summarization text box
+        self.summarization_textbox = tk.Text(self.leftpanel, height=10, width=50, wrap='word', borderwidth=1, relief='solid', padx=5, pady=5, font=("Helvetica", 10))
+        self.summarization_textbox.grid(column=0, row=1, padx=10, pady=5, sticky="nswe")
+        
+    def summarize(self):
+        self.summarization_button.config(state = "disabled")
+        self.summarization_textbox.config(state = "normal")
+        message = self.chatAI.prev_text
+        if message == "":
+            self.summarization_textbox.delete('1.0', 'end')
+            self.summarization_textbox.insert('1.0', message)
+        else:
+            self.summarization_textbox.delete('1.0', 'end')
+            self.chatAI.get_response(message + "\n" + SUMMARY_MESSAGE, self.summarization_textbox, self.copy_response.get(), self.reset_chat.get())
+        self.summarization_textbox.config(state = "disabled")
+        self.summarization_button.config(state = "enabled")
+        return
+    
     def retrieve_timestamp(self):
         timestamp = self.browser.retrieve_current_timestamp_from_div()
         self.timestamp.delete(0, 'end')
@@ -316,13 +372,15 @@ class ChatClient(ttk.Frame):
             self.system_prompt.insert('end', "Running OCR...\n")
             self.system_prompt.see(tk.END)
             prompt += "[OCR]\n" + self.get_ocr_prompt()
-        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp()) + self.user_prompt.get("1.0", tk.END) + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
+        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp()) + "\n" + self.user_prompt.get("1.0", tk.END) + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
         self.system_prompt.insert('end', prompt)
         self.system_prompt.see(tk.END)
         return prompt
 
     def send_message(self):
         self.send_button.config(state="disabled")
+        self.chat_history.config(state='normal')  # Make it editable
+        success = True
       # Get the current message
         try:
             message = self.message_input.get("1.0", 'end-1c')
@@ -331,35 +389,35 @@ class ChatClient(ttk.Frame):
                     self.message_input.delete("1.0", 'end')  # Clear the input field
 
                     # Add the message to the chat history
-                    self.chat_history.config(state='normal')  # Make it editable
                     self.chat_history.insert('end', "You: " + message + '\n')
                     self.chat_history.tag_config('separator', foreground='grey')
 
                     #Send message
                     self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
 
-                    self.chat_history.config(state='disabled')  # M
                 else:
                     self.chatAI.generate_response(self.construct_prompt(), self.chat_history, self.reset_chat.get(), self.copy_response.get())
             else:
                 if message:
                     self.message_input.delete("1.0", 'end')  # Clear the input field
                     # Add the message to the chat history
-                    self.chat_history.config(state='normal')  # Make it editable
                     self.chat_history.insert('end', "You: " + message + '\n')
                     self.chat_history.tag_config('separator', foreground='grey')
 
                     #Send message
                     self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
 
-                    self.chat_history.config(state='disabled')  # M
                 else:
-                    self.system_prompt.insert('end', "Please enter a message\n")
-                    
+                    success = False
+                    self.system_prompt.insert('end', "Please enter a message\n")  
         except Exception as e:
             self.chat_history.insert('end', f"Error: {repr(e)} \nYou might want to try other models for now, and make sure you update all dependencies of this program. The official models are stable yet cost you money.\n")
             self.system_prompt.insert('end', f"Error: {repr(e)}\n")
+        
+        self.chat_history.config(state='disabled')
         self.send_button.config(state="normal")
+        if success and self.summarize_checkbox_value.get():
+            self.summarize()
             
 class attribute_to_be(object):
     def __init__(self, locator, attribute, value):
