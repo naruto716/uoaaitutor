@@ -172,9 +172,12 @@ class Tooltip:
 
 class ChatClient(ttk.Frame):
     def __init__(self, link, parent=None, **kwargs):
-        self.browser = BrowserInteraction(link)
+        self.lecture_mode = False
+        if link != None:
+            self.browser = BrowserInteraction(link)
+            self.ocr = OCR()
+            self.lecture_mode = True
         self.chatAI = ChatAI()
-        self.ocr = OCR()
 
         ttk.Frame.__init__(self, parent, **kwargs)
         self.parent = parent
@@ -193,13 +196,34 @@ class ChatClient(ttk.Frame):
         self.chatAI.set_model(self.gpt_combobox.get())
 
     def initialize_user_interface(self):
+        style = ttk.Style()
+        style.configure("White.TEntry", fieldbackground="white")
+        style.configure("White.TButton", background="white")
+        style.configure("White.TCheckbutton", background="white")
+        style.configure("White.TFrame", background="white")
+        style.configure("White.TLabel", background="white")
+        
         # Create labels for widgets
         ttk.Label(self.parent, text='System Prompt:', background='white', padding=10).grid(column=1, row=0, sticky='w')
-        ttk.Label(self.parent, text='Message Input:', background='white', padding=10).grid(column=0, row=2, sticky='w')
+        ttk.Label(self.parent, text='Message Input:', background='white', padding=10).grid(column=0, row=2, sticky='ws')
 
         # Define the system prompt input field
-        self.system_prompt = scrolledtext.ScrolledText(self.parent, height=3, width=25)
-        self.system_prompt.grid(column=1, row=1, rowspan=5, padx=10, pady=10, sticky="nsew")
+        self.right_panel = ttk.Frame(self.parent, style="White.TFrame")
+        self.right_panel.grid_columnconfigure(0, weight=1)
+        self.right_panel.grid_rowconfigure(0, weight=5) 
+        self.right_panel.grid_rowconfigure(1, weight=3)
+        self.right_panel.grid_rowconfigure(1, weight=1)
+        
+        self.system_prompt = scrolledtext.ScrolledText(self.right_panel, height=15, width=25, font=("Serif", 12), borderwidth=1, relief="solid")
+        self.system_prompt.grid(column=0, row=0, padx=10, pady=10, sticky="nsew")
+        
+        self.user_prompt_label = ttk.Label(self.right_panel, text='AI Prompt:', style="White.TLabel")
+        self.user_prompt_label.grid(column=0, row=1, sticky='ws')
+        
+        self.user_prompt = scrolledtext.ScrolledText(self.right_panel, height=10, width=25, font=("Serif", 12), borderwidth=1, relief="solid")
+        self.user_prompt.insert(tk.END, MESSAGE)
+        self.user_prompt.grid(column=0, row=2, padx=10, pady=10, sticky="nsew")
+        self.right_panel.grid(column=1, row=1, rowspan=5, padx=10, pady=10, sticky="nsew")
 
         # Define the chat history box
         self.chat_history = scrolledtext.ScrolledText(self.parent, height=15, width=50)
@@ -212,11 +236,6 @@ class ChatClient(ttk.Frame):
         self.message_input = scrolledtext.ScrolledText(self.parent, height=8, width=50)
         self.message_input.grid(column=0, row=3, padx=10, pady=10, sticky="ew")
         self.message_input.config(bg='#FFF9C4')
-
-        style = ttk.Style()
-        style.configure("White.TEntry", fieldbackground="white")
-        style.configure("White.TButton", background="white")
-        style.configure("White.TCheckbutton", background="white")
 
         # Define the timestamp input field
         self.timestamp_frame = tk.Frame(self.parent, background="white")
@@ -297,7 +316,7 @@ class ChatClient(ttk.Frame):
             self.system_prompt.insert('end', "Running OCR...\n")
             self.system_prompt.see(tk.END)
             prompt += "[OCR]\n" + self.get_ocr_prompt()
-        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp()) + MESSAGE + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
+        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp()) + self.user_prompt.get("1.0", tk.END) + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
         self.system_prompt.insert('end', prompt)
         self.system_prompt.see(tk.END)
         return prompt
@@ -307,20 +326,36 @@ class ChatClient(ttk.Frame):
       # Get the current message
         try:
             message = self.message_input.get("1.0", 'end-1c')
-            if message:  #if message is not empty
-                self.message_input.delete("1.0", 'end')  # Clear the input field
+            if self.lecture_mode:
+                if message:  #if message is not empty
+                    self.message_input.delete("1.0", 'end')  # Clear the input field
 
-                # Add the message to the chat history
-                self.chat_history.config(state='normal')  # Make it editable
-                self.chat_history.insert('end', "You: " + message + '\n')
-                self.chat_history.tag_config('separator', foreground='grey')
+                    # Add the message to the chat history
+                    self.chat_history.config(state='normal')  # Make it editable
+                    self.chat_history.insert('end', "You: " + message + '\n')
+                    self.chat_history.tag_config('separator', foreground='grey')
 
-                #Send message
-                self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
+                    #Send message
+                    self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
 
-                self.chat_history.config(state='disabled')  # M
+                    self.chat_history.config(state='disabled')  # M
+                else:
+                    self.chatAI.generate_response(self.construct_prompt(), self.chat_history, self.reset_chat.get(), self.copy_response.get())
             else:
-                self.chatAI.generate_response(self.construct_prompt(), self.chat_history, self.reset_chat.get(), self.copy_response.get())
+                if message:
+                    self.message_input.delete("1.0", 'end')  # Clear the input field
+                    # Add the message to the chat history
+                    self.chat_history.config(state='normal')  # Make it editable
+                    self.chat_history.insert('end', "You: " + message + '\n')
+                    self.chat_history.tag_config('separator', foreground='grey')
+
+                    #Send message
+                    self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
+
+                    self.chat_history.config(state='disabled')  # M
+                else:
+                    self.system_prompt.insert('end', "Please enter a message\n")
+                    
         except Exception as e:
             self.chat_history.insert('end', f"Error: {repr(e)} \nYou might want to try other models for now, and make sure you update all dependencies of this program. The official models are stable yet cost you money.\n")
             self.system_prompt.insert('end', f"Error: {repr(e)}\n")
@@ -409,7 +444,7 @@ class BrowserInteraction:
         self.driver.quit()
 
 def main():
-    link = simpledialog.askstring("Input", "Please enter the link to the lecture recording:")
+    link = simpledialog.askstring("Input", "Please enter the link to the lecture recording (Select cancel for chatting):")
     root = tk.Tk()
     root.title("Cope Hard I Cry")
     ChatClient(link, root)
