@@ -1,6 +1,6 @@
 # UOA COMPSCI230 Cope Hard I Cry
 Leveraging cutting-edge technology, this tool is your personal companion for deciphering the most unnecessarily confusing lectures, those that have stumped others before. 
-![image](https://github.com/naruto716/uoaaitutor/assets/79365555/454e0248-9caa-450e-972a-a494bda17753)
+![image](https://github.com/naruto716/uoaaitutor/assets/79365555/9a471390-0003-439b-86c3-2cd5b4380ec3)
 
 # Description:
 As none of my friends found the the lectures understandable due to the way some concepts are explained (I am struggling a lot with understanding some very simple ideas from the lectures as well), I tried several approaches and found AIs very helpful with the comprehension of badly explained ideas. You might also want to use it for other unnecessarily confusing papers.
@@ -102,4 +102,5 @@ ChatGPT Official:
 7. Do step 6 again for another topic/slide in the lecture
 8. If you want to use OCR, make sure you tick the OCR checkbox:
 ![image](https://github.com/naruto716/uoaaitutor/assets/79365555/32f7d6fb-6858-4f52-87be-1a277fc1da35)
+9. If you want to open another video, make sure you open it in the CURRENT BROWSER TAB, and type in `/reload` in the Message Input box.
 If you encounter any issues, feel free to open an issue on this GitHub repository, and we will do our best to assist you. Enjoy using the tool!
