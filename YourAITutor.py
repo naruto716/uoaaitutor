@@ -47,14 +47,17 @@ class ChatAI:
 
         self.set_model(DEFAULT_MODEL)
         
-    def generate_response(self, message, window, reset, copy_to_clipboard = False):
+    def generate_response(self, message, window, reset, copy_to_clipboard = False, temp_model=""):
         window.insert(tk.END, "AI: ")
-        response = self.get_response(message, window, reset, copy_to_clipboard)
+        response = self.get_response(message, window, reset, copy_to_clipboard, temp_model)
         window.insert('end', '\n' + '-'*50 + '\n', 'separator')  # Add separation line
         self.prev_text = response
         return response
 
-    def get_response(self, message, window, reset, copy_to_clipboard = False):
+    def get_response(self, message, window, reset, copy_to_clipboard = False, temp_model=""):
+        old_model = self.chatbot
+        if temp_model:
+            self.set_model(temp_model)
         response = ""
         if self.chatbot == self.chatgpt:
             response = self.ask_gpt(message, window, reset)
@@ -68,6 +71,7 @@ class ChatAI:
             response = self.ask_bard(message, window, reset)
         if copy_to_clipboard:
             pyperclip.copy(response)
+        self.chatbot = old_model
         return response
 
     def ask_bard(self, message, window, reset):
@@ -337,8 +341,7 @@ class ChatClient(ttk.Frame):
             self.summarization_textbox.insert('1.0', message)
         else:
             self.summarization_textbox.delete('1.0', 'end')
-            self.chatAI.get_response(message + "\n" + SUMMARY_MESSAGE, self.summarization_textbox, self.copy_response.get(), self.reset_chat.get())
-        self.summarization_textbox.config(state = "disabled")
+            self.chatAI.get_response(message + "\n" + SUMMARY_MESSAGE, self.summarization_textbox, self.copy_response.get(), self.reset_chat.get(), self.summarization_box.get())
         self.summarization_button.config(state = "enabled")
         return
     
