@@ -357,15 +357,18 @@ class ChatClient(ttk.Frame):
         return self.ocr.get_text(image_path)
     
     def timestamp_to_int(self, timestamp):
-        mm, ss = timestamp.split(':')
-        return int(mm) * 60 + int(ss)
+        if ':' in timestamp:
+            mm, ss = timestamp.split(':')
+            return int(mm) * 60 + int(ss)
+        else:
+            return 0 #for cases without a timestamp, which usually occurs at the beginning of the video
 
-    def get_relevant_transcription_from_timestamp(self, timestamp):
+    def get_relevant_transcription_from_timestamp(self, timestamp, timespanValue):
         text_list = []
         int_timestamp = self.timestamp_to_int(timestamp)
         for time, text in self.browser.timestamp_data.items():
             int_time = self.timestamp_to_int(time)
-            if abs(int_timestamp - int_time) < int(self.time_span.get()) and text != None:
+            if abs(int_timestamp - int_time) < timespanValue and text != None:
                 text_list.append(f"{text} [{time}]\n")
         return " ".join(text_list)
 
@@ -375,10 +378,26 @@ class ChatClient(ttk.Frame):
             self.system_prompt.insert('end', "Running OCR...\n")
             self.system_prompt.see(tk.END)
             prompt += "[OCR]\n" + self.get_ocr_prompt()
-        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp()) + "\n" + self.user_prompt.get("1.0", tk.END) + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
+        prompt += "\n" + "[TRANSCRIPTION]\n" + self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp(), int(self.time_span.get())) + "\n" + self.user_prompt.get("1.0", tk.END) + "\nCurrent timestamp: " + self.retrieve_timestamp() + "\n"
+        prompt = self.replace_text(prompt)
         self.system_prompt.insert('end', prompt)
         self.system_prompt.see(tk.END)
         return prompt
+
+    def summary_query(self, text):
+        response = ""
+        for data in self.chatAI.chatgpt.ask(text):
+            response = data["message"]
+        return response
+
+    def replace_text(self, text):
+        if CURRENT_CONTENT in text:
+            prompt = self.get_relevant_transcription_from_timestamp(self.retrieve_timestamp(), TIME_SPAN_CURRENT_CONTENT) + "\n" + CURRENT_CONTENT_PROMPT
+            print("Replace text inquiry: " + prompt)
+            prompt = self.summary_query(prompt)
+            print("Replaced", prompt)
+            text = text.replace(CURRENT_CONTENT, prompt)
+        return text
 
     def send_message(self):
         self.send_button.config(state="disabled")
@@ -389,14 +408,20 @@ class ChatClient(ttk.Frame):
             message = self.message_input.get("1.0", 'end-1c')
             if self.lecture_mode:
                 if message:  #if message is not empty
-                    self.message_input.delete("1.0", 'end')  # Clear the input field
+                    if message.startswith("/reload"):
+                        self.message_input.delete("1.0", 'end')  # Clear the input field
+                        self.system_prompt.insert('end', "Reloading transcription...\n")
+                        self.browser.load_transcription()
+                        self.system_prompt.insert('end', "Reloaded!\n")
+                    else:
+                        self.message_input.delete("1.0", 'end')  # Clear the input field
 
-                    # Add the message to the chat history
-                    self.chat_history.insert('end', "You: " + message + '\n')
-                    self.chat_history.tag_config('separator', foreground='grey')
+                        # Add the message to the chat history
+                        self.chat_history.insert('end', "You: " + message + '\n')
+                        self.chat_history.tag_config('separator', foreground='grey')
 
-                    #Send message
-                    self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
+                        #Send message
+                        self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
 
                 else:
                     self.chatAI.generate_response(self.construct_prompt(), self.chat_history, self.reset_chat.get(), self.copy_response.get())
@@ -445,7 +470,9 @@ class BrowserInteraction:
     def get_transcription(self, link):
         # Load the webpage
         self.driver.get(link)# Replace with the URL of the webpage
+        self.load_transcription()
 
+    def load_transcription(self):
         # Wait for "aria-selected" attribute of the element with id "transcriptTabHeader" to be "true"
         print("Waiting for the Caption tab to be selected...")
         wait = WebDriverWait(self.driver, 120)  # Maximum wait time of 120 seconds
@@ -460,6 +487,7 @@ class BrowserInteraction:
         # Find all the elements with class "index-event-row"
         elements = self.driver.find_elements(By.CLASS_NAME, 'index-event-row')
 
+        self.timestamp_data.clear()
         print("Getting Transcription")
         # Iterate over the elements
         for element in elements:
