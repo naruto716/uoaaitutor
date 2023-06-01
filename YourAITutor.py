@@ -182,7 +182,7 @@ class ChatClient(ttk.Frame):
         self.parent.iconbitmap('icon.ico')
         self.parent.rowconfigure(0, weight=1)
         self.parent.columnconfigure(0, weight=1)
-        self.parent.columnconfigure(1, weight=1)
+        self.parent.columnconfigure(1, weight=2)
 
         self.mainpanel = tk.Frame(master=self.parent, width=1200, height=600, bg='white')
         self.mainpanel.grid_columnconfigure(0, weight=3)  # Make the main window responsive horizontally
@@ -282,7 +282,7 @@ class ChatClient(ttk.Frame):
         self.ocr_checkbox.grid(column=3, row=0, padx=10, pady=5, sticky="we")
 
         # Adding a checkbox for reset inside the frame
-        self.reset_chat = BooleanVar(value=True)
+        self.reset_chat = BooleanVar(value=False)
         self.reset_chat_box = ttk.Checkbutton(self.extra_options_frame, text='Reset', variable=self.reset_chat, style="White.TCheckbutton")
         Tooltip(self.reset_chat_box, "Reset the chatbot's memory each time you hit send without a message\nThis may be required for bing to work properly as it might terminate conversations occasionally")
         self.reset_chat_box.grid(column=4, row=0, padx=10, pady=5, sticky="we")
@@ -406,7 +406,7 @@ class ChatClient(ttk.Frame):
       # Get the current message
         try:
             message = self.message_input.get("1.0", 'end-1c')
-            if self.lecture_mode:
+            if self.lecture_mode: #Lecture Mode
                 if message:  #if message is not empty
                     if message.startswith("/reload"):
                         self.message_input.delete("1.0", 'end')  # Clear the input field
@@ -421,11 +421,11 @@ class ChatClient(ttk.Frame):
                         self.chat_history.tag_config('separator', foreground='grey')
 
                         #Send message
-                        self.chatAI.generate_response(message, self.chat_history, self.reset_chat.get(), self.copy_response.get())
+                        self.chatAI.generate_response(message, self.chat_history, False, self.copy_response.get())
 
                 else:
                     self.chatAI.generate_response(self.construct_prompt(), self.chat_history, self.reset_chat.get(), self.copy_response.get())
-            else:
+            else:#Chat Mode
                 if message:
                     self.message_input.delete("1.0", 'end')  # Clear the input field
                     # Add the message to the chat history
