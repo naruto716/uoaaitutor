@@ -1,6 +1,6 @@
 selenium
 easyocr
 revChatGPT
-EdgeGPT
+EdgeGPT==0.6.5
 GoogleBard
 pyperclip
